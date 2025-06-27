@@ -1,30 +1,69 @@
+"""Tests for the neighbor aggregation functionality in the GNN implementation.
+
+This module contains comprehensive tests for different aggregation methods (sum, mean, max, min)
+across various graph configurations:
+- Basic aggregation operations
+- Directed vs undirected graphs
+- Isolated nodes
+- Edge cases (zero features, large graphs)
+- Weighted aggregations
+"""
+
 import torch
+from typing import Tuple
+import pytest
 from src.data.graph import Graph
 from src.layers.aggregation import aggregate_neighbors
-import pytest
 
-def test_sum_aggregation():
-    # Graph: 0 ↔ 1 ↔ 2 (undirected)
+def create_test_graph(
+    features: torch.Tensor,
+    edge_index: torch.Tensor,
+    directed: bool = False,
+    edge_weights: torch.Tensor = None
+) -> Graph:
+    """Helper function to create a test graph with given parameters.
+    
+    Args:
+        features: Node feature matrix
+        edge_index: Edge connectivity matrix
+        directed: Whether the graph is directed
+        edge_weights: Optional edge weights
+        
+    Returns:
+        Graph instance for testing
+    """
+    return Graph(features, edge_index, directed=directed, edge_weights=edge_weights)
+
+def test_sum_aggregation() -> None:
+    """Test sum aggregation on a simple undirected graph.
+    
+    Graph structure: 0 ↔ 1 ↔ 2 (undirected)
+    Expected: Node 1's aggregated features should be sum of nodes 0 and 2
+    """
     features = torch.tensor([
         [1.0, 2.0],  # Node 0
         [0.0, 0.0],  # Node 1 (target)
         [3.0, 4.0]   # Node 2
     ])
     edge_index = torch.tensor([[0, 1, 1, 2], [1, 0, 2, 1]])
-    graph = Graph(features, edge_index)
+    graph = create_test_graph(features, edge_index)
     
     agg = aggregate_neighbors(graph, 1, "sum")
     assert torch.allclose(agg, torch.tensor([4.0, 6.0]))  # [1+3, 2+4]
 
-def test_mean_aggregation():
-    # Graph: 0 ↔ 1 ↔ 2 (undirected)
+def test_mean_aggregation() -> None:
+    """Test mean aggregation on a simple undirected graph.
+    
+    Graph structure: 0 ↔ 1 ↔ 2 (undirected)
+    Expected: Node 1's aggregated features should be mean of nodes 0 and 2
+    """
     features = torch.tensor([
         [1.0, 2.0],  # Node 0
         [0.0, 0.0],  # Node 1 (target)
         [3.0, 4.0]   # Node 2
     ])
     edge_index = torch.tensor([[0, 1, 1, 2], [1, 0, 2, 1]])
-    graph = Graph(features, edge_index)
+    graph = create_test_graph(features, edge_index)
 
     agg = aggregate_neighbors(graph, 1, "mean")
     assert torch.allclose(agg, torch.tensor([2.0, 3.0]))  # (1+3)/2, (2+4)/2
@@ -139,49 +178,56 @@ def test_large_graph_performance():
     # Should complete without memory issues
     aggregate_neighbors(graph, 5000, "sum")
 
-def test_weighted_sum():
-    """Weights should scale neighbor contributions"""
-    # Node 1 has neighbors 0 (weight=0.5) and 2 (weight=2.0)
+def test_weighted_sum() -> None:
+    """Test weighted sum aggregation where edge weights scale neighbor contributions.
+    
+    Graph structure: 0 -[0.5]→ 1 ←[2.0]- 2
+    Expected: Node 1's features should be weighted sum of neighbors
+    """
     features = torch.tensor([[1.0], [999.0], [3.0]])  # Node 1's features unused
-    edge_index = torch.tensor([[0, 2], [1, 1]])        # 0→1 and 2→1
+    edge_index = torch.tensor([[0, 2], [1, 1]])       # 0→1 and 2→1
     edge_weights = torch.tensor([0.5, 2.0])
-    graph = Graph(features, edge_index, edge_weights=edge_weights)
+    graph = create_test_graph(features, edge_index, directed=True, edge_weights=edge_weights)
     
     agg = aggregate_neighbors(graph, 1, aggr="sum")
     assert agg.item() == (1.0*0.5 + 3.0*2.0)  # 0.5 + 6.0 = 6.5
 
-def test_weighted_mean():
-    """Weights should control averaging"""
-    # Node 1 has neighbors 0 (weight=0.5) and 2 (weight=2.0)
-    features = torch.tensor([[1.0], [999.0], [3.0]])  # Node 1's features unused
-    edge_index = torch.tensor([[0, 2], [1, 1]])        # 0→1 and 2→1
+def test_weighted_mean() -> None:
+    """Test weighted mean aggregation where weights influence the averaging.
+    
+    Graph structure: 0 -[0.5]→ 1 ←[2.0]- 2
+    Expected: Node 1's features should be weighted average of neighbors
+    """
+    features = torch.tensor([[1.0], [999.0], [3.0]])
+    edge_index = torch.tensor([[0, 2], [1, 1]])
     edge_weights = torch.tensor([0.5, 2.0])
-    graph = Graph(features, edge_index, edge_weights=edge_weights)
+    graph = create_test_graph(features, edge_index, directed=True, edge_weights=edge_weights)
+    
     agg = aggregate_neighbors(graph, 1, aggr="mean")
     expected = (1.0*0.5 + 3.0*2.0) / (0.5 + 2.0)  # 6.5 / 2.5 = 2.6
     assert agg.item() == pytest.approx(2.6)
 
-def test_zero_weights():
-    """Avoid division by zero in weighted mean"""
-    # Node 1 has neighbors 0 (weight=0.5) and 2 (weight=2.0)
-    features = torch.tensor([[1.0], [999.0], [3.0]])  # Node 1's features unused
-    edge_index = torch.tensor([[0, 2], [1, 1]])        # 0→1 and 2→1
-    edge_weights = torch.tensor([0.0, 0.0]) 
-    graph = Graph(features, edge_index, edge_weights=edge_weights)
+def test_zero_weights() -> None:
+    """Test handling of zero weights in weighted mean aggregation.
+    
+    Expected: Should handle zero weights gracefully without division by zero
+    """
+    features = torch.tensor([[1.0], [999.0], [3.0]])
+    edge_index = torch.tensor([[0, 2], [1, 1]])
+    edge_weights = torch.tensor([0.0, 0.0])
+    graph = create_test_graph(features, edge_index, directed=True, edge_weights=edge_weights)
+    
     agg = aggregate_neighbors(graph, 1, aggr="mean")
     assert agg.item() == 0.0  # Not NaN!
 
-def test_mismatched_weights():
-    """Validate edge_weights/edge_index alignment"""
+def test_mismatched_weights() -> None:
+    """Test validation of edge_weights/edge_index alignment.
+    
+    Expected: Should raise ValueError when number of weights doesn't match edges
+    """
     features = torch.tensor([[1.0], [2.0], [3.0]])
     edge_index = torch.tensor([[0, 1, 2], [1, 2, 0]])  # 3 edges
-    edge_weights=torch.rand(2)
+    edge_weights = torch.rand(2)  # Only 2 weights
     
     with pytest.raises(ValueError):
-        # 3 edges but 2 weights
-        graph = Graph(
-        node_features=features,
-        edge_index=edge_index,
-        edge_weights=edge_weights
-    )
-        agg = aggregate_neighbors(graph, 1, aggr="mean")
+        create_test_graph(features, edge_index, edge_weights=edge_weights)

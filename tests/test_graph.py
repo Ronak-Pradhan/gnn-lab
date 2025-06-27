@@ -1,13 +1,40 @@
-import torch
-from src.data.graph import Graph
+"""Tests for the Graph data structure implementation.
 
-def test_node_feature_retrieval():
-    # 3 nodes with 5 features each
-    features = torch.tensor([
-        [0.1, 0.2, 0.3, 0.4, 0.5],
-        [1.1, 1.2, 1.3, 1.4, 1.5],
-        [2.1, 2.2, 2.3, 2.4, 2.5]
-    ])
+This module contains comprehensive tests for the Graph class functionality:
+- Node feature storage and retrieval
+- Edge connectivity and weights
+- Directed vs undirected graph behavior
+- Edge cases (empty graphs, single nodes)
+- Error handling for invalid configurations
+"""
+
+import torch
+from typing import Tuple, List, Optional
+from src.data.graph import Graph
+import pytest
+
+def create_test_features(num_nodes: int, feature_dim: int) -> torch.Tensor:
+    """Create test node features with sequential values.
+    
+    Args:
+        num_nodes: Number of nodes in the graph
+        feature_dim: Number of features per node
+        
+    Returns:
+        Tensor of shape (num_nodes, feature_dim) with sequential values
+    """
+    return torch.tensor([
+        [n + f/10 for f in range(feature_dim)]
+        for n in range(num_nodes)
+    ], dtype=torch.float)
+
+def test_node_feature_retrieval() -> None:
+    """Test basic node feature storage and retrieval.
+    
+    Creates a graph with 3 nodes, each having 5 features,
+    and verifies that features can be correctly accessed.
+    """
+    features = create_test_features(3, 5)
     graph = Graph(
         node_features=features,
         edge_index=torch.empty((2, 0)),  # No edges
@@ -18,7 +45,12 @@ def test_node_feature_retrieval():
     assert torch.allclose(graph.x[1], features[1])
     assert torch.allclose(graph.x[2], features[2])
 
-def test_single_node_graph():
+def test_single_node_graph() -> None:
+    """Test graph operations on a minimal graph with one node.
+    
+    Verifies that a single-node graph works correctly and
+    properly handles neighbor queries.
+    """
     graph = Graph(
         node_features=torch.tensor([[10.0]]),  # 1 node, 1 feature
         edge_index=torch.empty((2, 0)),
@@ -27,7 +59,12 @@ def test_single_node_graph():
     neighbors = graph.get_neighbors(0)
     assert neighbors.tolist() == []
 
-def test_edge_weight_storage():
+def test_edge_weight_storage() -> None:
+    """Test storage and retrieval of edge weights.
+    
+    Creates a directed graph with weighted edges and verifies
+    that weights are stored correctly.
+    """
     edge_index = torch.tensor([[0, 1], [1, 2]])
     edge_weights = torch.tensor([0.5, 2.0])
     
@@ -42,8 +79,12 @@ def test_edge_weight_storage():
     assert torch.allclose(graph.edge_weights, edge_weights)
     assert graph.edge_weights.shape == (2,)
 
-def test_weighted_neighbor_relationships():
-    # 0 → 1 ← 2 (node 1 has two in-neighbors: 0 and 2)
+def test_weighted_neighbor_relationships() -> None:
+    """Test neighbor relationships in a weighted directed graph.
+    
+    Graph structure: 0 -[0.5]→ 1 ←[2.0]- 2
+    Verifies that neighbors and their weights are correctly identified.
+    """
     edge_index = torch.tensor([[0, 2], [1, 1]])  # Two edges pointing to node 1
     edge_weights = torch.tensor([0.5, 2.0])
     
@@ -64,14 +105,24 @@ def test_weighted_neighbor_relationships():
         torch.tensor([0.5, 2.0])
     )
 
-def test_empty_graph():
+def test_empty_graph() -> None:
+    """Test initialization and operations on an empty graph.
+    
+    Verifies that a graph with no nodes can be created and
+    basic properties are correct.
+    """
     graph = Graph(
         node_features=torch.empty((0, 0)),  # 0 nodes
         edge_index=torch.empty((2, 0)),
     )
     assert graph.num_nodes == 0
 
-def test_no_edge_weights():
+def test_no_edge_weights() -> None:
+    """Test graph creation without edge weights.
+    
+    Verifies that a graph can be created with unweighted edges
+    and the edge_weights attribute is None.
+    """
     graph = Graph(
         node_features=torch.randn(2, 2),
         edge_index=torch.tensor([[0], [1]]),
@@ -79,20 +130,26 @@ def test_no_edge_weights():
     )
     assert graph.edge_weights is None
 
-def test_weight_edge_index_mismatch():
-    try:
+def test_weight_edge_index_mismatch() -> None:
+    """Test error handling for mismatched edge indices and weights.
+    
+    Verifies that an error is raised when the number of edge weights
+    doesn't match the number of edges.
+    """
+    with pytest.raises(ValueError):
         Graph(
             node_features=torch.randn(2, 2),
             edge_index=torch.tensor([[0], [1]]),  # 1 edge
             edge_weights=torch.tensor([0.5, 1.0])  # 2 weights
         )
-        assert False, "Should have raised ValueError"
-    except ValueError:
-        pass  # Expected behavior
 
-def test_unidirectional_weights():
-    """Test weights in a directed graph with one-way edges"""
-    # Create a directed graph: 0 → 1 → 2 with different weights
+def test_unidirectional_weights() -> None:
+    """Test weight handling in a directed graph with one-way edges.
+    
+    Graph structure: 0 -[0.5]→ 1 -[2.0]→ 2
+    Verifies that weights are correctly associated with edges
+    and neighbor relationships respect edge directions.
+    """
     edge_index = torch.tensor([[0, 1], [1, 2]])  # Two directed edges
     edge_weights = torch.tensor([0.5, 2.0])      # Different weights for each edge
     
