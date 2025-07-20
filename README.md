@@ -1,14 +1,13 @@
-# 🧠➡️📊 GNN From Scratch  
-Version: 0.1.0 (Phase 1 Complete)
+# 🧠 GNN From Scratch  
+
 Production-grade Graph Neural Networks from first principles
 
-[![CI Status](https://github.com/Ronak-Pradhan/gnn-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/Ronak-Pradhan/gnn-lab/actions) 
 [![Current Phase](https://img.shields.io/badge/Phase-1%3A%20Foundations-brightgreen)](docs/ROADMAP.md)
 
 ## 🔍 Project Overview  
 Implementing fundamental GNN components with production-grade Python practices:  
 - Strict type checking & docstrings  
-- Comprehensive unit testing (90%+ coverage)  
+- Comprehensive unit testing
 - CI/CD integration  
 - Modular architecture  
 
@@ -27,8 +26,8 @@ Implemented Features
 
 ```bash
 git clone https://github.com/Ronak-Pradhan/gnn-lab.git
-cd gnn-from-scratch
-pip install -e .  # Editable install
+cd gnn-lab
+pip install torch pytest
 
 # Run tests
 pytest tests/
@@ -52,11 +51,13 @@ print(f"Output shape: {output.shape}")
 ```
 
 📊 Performance Baseline
-Scenario	Throughput
-Small Graphs (100 nodes)	>40k nodes/sec
-Medium Graphs (1k nodes)	>30k nodes/sec
-Large Graphs (20k nodes)	>13k nodes/sec
-Note: Current implementation focuses on correctness over optimization - see roadmap for planned improvements
+| Scenario | Throughput |
+|----------|------------|
+| Small Graphs (100 nodes) | >40k nodes/sec |
+| Medium Graphs (1k nodes) | >30k nodes/sec |
+| Large Graphs (20k nodes) | >13k nodes/sec |
+
+*Note: Current implementation focuses on correctness over optimization - see roadmap for planned improvements*  
 [Full benchmark details](docs/PERFORMANCE.md)
 
 ## 📚 Documentation
