@@ -92,8 +92,9 @@ def aggregate_neighbors(
     elif aggr == "max":
         features = messages.max(dim=0)[0]
     elif aggr == "mean":
-        # Add small epsilon to denominator to avoid division by zero
-        features = messages.sum(dim=0)/(weights.sum(dim=0) + 1e-8)
+        # Use absolute values in denominator to handle negative weights properly
+        # This treats negative weights as having the same "magnitude" for normalization
+        features = messages.sum(dim=0)/(weights.abs().sum(dim=0) + 1e-8)
     elif aggr == "min":
         features = messages.min(dim=0)[0]
     
