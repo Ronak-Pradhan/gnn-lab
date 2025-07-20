@@ -1,26 +1,4 @@
-"""Neighbor feature aggregation functionality for Graph Neural Networks.
-
-This module provides functions for aggregating features from neighboring nodes in a graph.
-It supports various aggregation methods (sum, mean, max, min) and handles both weighted
-and unweighted graphs.
-
-The aggregation process:
-1. Identifies neighbors of the target node
-2. Applies edge weights (if any) to neighbor features
-3. Combines features using the specified aggregation method
-
-Example:
-    ```python
-    graph = Graph(
-        node_features=torch.randn(3, 16),  # 3 nodes, 16 features each
-        edge_index=torch.tensor([[0, 1], [1, 2]]),  # Two edges: 0→1, 1→2
-        edge_weights=torch.tensor([0.5, 2.0])  # Edge weights
-    )
-    
-    # Aggregate features for node 1 using weighted mean
-    features = aggregate_neighbors(graph, node_idx=1, aggr="mean")
-    ```
-"""
+"""Neighbor feature aggregation functionality for Graph Neural Networks."""
 
 import torch
 from typing import Optional, Union
@@ -38,6 +16,11 @@ def aggregate_neighbors(
     This function combines features from neighboring nodes using the specified
     aggregation method. For weighted graphs, the weights are applied before
     aggregation. If a node has no neighbors, a zero vector is returned.
+
+    The aggregation process:
+    1. Identifies neighbors of the target node
+    2. Applies edge weights (if any) to neighbor features
+    3. Combines features using the specified aggregation method
     
     Args:
         graph: Input graph containing node features and connectivity information
@@ -60,6 +43,19 @@ def aggregate_neighbors(
         - For weighted graphs, weights are applied before max/min aggregation
         - For mean aggregation with zero-sum weights, returns zero vector
         - Empty feature dimensions (num_features=0) are handled gracefully
+
+
+    Example:
+        ```python
+        graph = Graph(
+            node_features=torch.randn(3, 16),  # 3 nodes, 16 features each
+            edge_index=torch.tensor([[0, 1], [1, 2]]),  # Two edges: 0→1, 1→2
+            edge_weights=torch.tensor([0.5, 2.0])  # Edge weights
+        )
+        
+        # Aggregate features for node 1 using weighted mean
+        features = aggregate_neighbors(graph, node_idx=1, aggr="mean")
+        ```
     """
     if node_idx < 0 or node_idx >= graph.num_nodes:
         raise IndexError(f"Node index {node_idx} out of range [0, {graph.num_nodes})")

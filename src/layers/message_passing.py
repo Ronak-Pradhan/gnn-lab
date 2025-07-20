@@ -1,25 +1,4 @@
-"""Message Passing Neural Network layer implementation.
-
-This module implements a generic message passing layer for Graph Neural Networks (GNNs).
-The layer follows the message passing paradigm where node features are updated based on
-aggregated information from their neighbors.
-
-The message passing process consists of three steps:
-1. Message: Transform neighbor features (can be overridden)
-2. Aggregate: Combine messages from neighbors using a specified aggregation method
-3. Update: Transform aggregated messages to produce new node features (can be overridden)
-
-Attributes:
-    aggr: Aggregation method to use ('sum', 'mean', 'max', or 'min')
-
-Example:
-    ```python
-    layer = MessagePassing(aggr="sum")
-    x = torch.randn(5, 16)  # 5 nodes, 16 features each
-    edge_index = torch.tensor([[0, 1], [1, 2]])  # Two edges: 0→1, 1→2
-    out = layer(x, edge_index)  # Forward pass
-    ```
-"""
+"""Message Passing Neural Network layer implementation."""
 
 import torch
 import torch.nn as nn
@@ -35,9 +14,22 @@ class MessagePassing(nn.Module):
     are updated based on aggregated information from its neighbors. The layer is
     customizable through different aggregation methods and can be extended by
     overriding the message and update functions.
+
+    The message passing process consists of three steps:
+    1. Message: Transform neighbor features (can be overridden)
+    2. Aggregate: Combine messages from neighbors using a specified aggregation method
+    3. Update: Transform aggregated messages to produce new node features (can be overridden)
     
     Attributes:
         aggr: Aggregation method to use ('sum', 'mean', 'max', or 'min')
+    
+    Example:
+        ```python
+        layer = MessagePassing(aggr="sum")
+        x = torch.randn(5, 16)  # 5 nodes, 16 features each
+        edge_index = torch.tensor([[0, 1], [1, 2]])  # Two edges: 0→1, 1→2
+        out = layer(x, edge_index)  # Forward pass
+        ```
     """
     
     def __init__(self, aggr: str) -> None:
