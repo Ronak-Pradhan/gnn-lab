@@ -105,21 +105,13 @@ def get_test_configs() -> List[Tuple[int, int]]:
         (20_000, 100_000)
     ]
 
-def get_aggregation_methods() -> List[str]:
-    """Get list of aggregation methods to test.
-    
-    Returns:
-        List of strings representing different aggregation methods
-    """
-    return AGGREGATION_METHODS
-
 if __name__ == "__main__":
     print("🔍 Performance Profiling - MessagePassing Layer")
     print("-----------------------------------------------")
     
     # Test configs
     configs = get_test_configs()
-    aggregations = get_aggregation_methods()
+    aggregations = AGGREGATION_METHODS
     
     # Print detailed stats
     print(f"\n📊 Profiling Results:")

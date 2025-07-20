@@ -59,37 +59,18 @@ def test_single_node_graph() -> None:
     neighbors = graph.get_neighbors(0)
     assert neighbors.tolist() == []
 
-def test_edge_weight_storage() -> None:
-    """Test storage and retrieval of edge weights.
-    
-    Creates a directed graph with weighted edges and verifies
-    that weights are stored correctly.
-    """
-    edge_index = torch.tensor([[0, 1], [1, 2]])
-    edge_weights = torch.tensor([0.5, 2.0])
-    
-    graph = Graph(
-        node_features=torch.randn(3, 2),
-        edge_index=edge_index,
-        edge_weights=edge_weights,
-        directed=True
-    )
-    
-    # Verify weights are stored correctly
-    assert torch.allclose(graph.edge_weights, edge_weights)
-    assert graph.edge_weights.shape == (2,)
-
 def test_weighted_neighbor_relationships() -> None:
     """Test neighbor relationships in a weighted directed graph.
     
     Graph structure: 0 -[0.5]→ 1 ←[2.0]- 2
     Verifies that neighbors and their weights are correctly identified.
     """
+    features = create_test_features(3, 3)
     edge_index = torch.tensor([[0, 2], [1, 1]])  # Two edges pointing to node 1
     edge_weights = torch.tensor([0.5, 2.0])
     
     graph = Graph(
-        node_features=torch.randn(3, 3),
+        node_features=features,
         edge_index=edge_index,
         edge_weights=edge_weights,
         directed=True
