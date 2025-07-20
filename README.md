@@ -1,6 +1,6 @@
 # 🧠➡️📊 GNN From Scratch  
-**Version: 0.1.0 (Phase 1 Complete)**  
-**Production-grade Graph Neural Networks from first principles**  
+Version: 0.1.0 (Phase 1 Complete)
+Production-grade Graph Neural Networks from first principles
 
 [![CI Status](https://github.com/Ronak-Pradhan/gnn-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/Ronak-Pradhan/gnn-lab/actions) 
 [![Current Phase](https://img.shields.io/badge/Phase-1%3A%20Foundations-brightgreen)](docs/ROADMAP.md)
