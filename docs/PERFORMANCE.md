@@ -1,76 +1,95 @@
-# Performance Benchmarks  
-## Test Environment  
-- **Device**: Apple M3 Pro
-- **Memory**: 32GB RAM  
-- **OS**: macOS Sonoma 14.7 
-- **Python**: 3.11.11 
-- **PyTorch**: 2.6.0
+# Performance Benchmarks
 
-## Methodology  
-1. Generated synthetic graphs with random features (16 features per node)  
-2. Each configuration is tested with multiple aggregation methods (sum, mean, max, min)  
-3. Multiple runs per configuration (5 iterations)  
-4. 2 warm-up iterations before timing  
-5. Reported metrics:  
-   - Median time across runs  
-   - Nodes processed per second
+## Phase 2 Release Baseline
 
-## Benchmark Results  
-### 📊 Message Passing Performance  
-| Nodes | Edges | Aggregation | Time (s) | Nodes/sec |
-|:-----:|:-----:|:-----------:|:--------:|:---------:|
-| 100 | 200 | sum | 0.0015 | 66,097 |
-| 100 | 200 | mean | 0.0018 | 57,078 |
-| 100 | 200 | max | 0.0023 | 43,235 |
-| 100 | 200 | min | 0.0023 | 42,574 |
-| 1,000 | 5,000 | sum | 0.0293 | 34,176 |
-| 1,000 | 5,000 | mean | 0.0267 | 37,428 |
-| 1,000 | 5,000 | max | 0.0297 | 33,658 |
-| 1,000 | 5,000 | min | 0.0299 | 33,415 |
-| 10,000 | 50,000 | sum | 0.6876 | 14,544 |
-| 10,000 | 50,000 | mean | 0.6120 | 16,340 |
-| 10,000 | 50,000 | max | 0.5850 | 17,094 |
-| 10,000 | 50,000 | min | 0.5909 | 16,924 |
-| 20,000 | 100,000 | sum | 1.5346 | 13,033 |
-| 20,000 | 100,000 | mean | 1.2601 | 15,872 |
-| 20,000 | 100,000 | max | 1.1816 | 16,926 |
-| 20,000 | 100,000 | min | 1.1891 | 16,820 |
+This section captures the minimum release-readiness benchmark for Phase 2:
 
-### Analysis  
-The benchmarks test the MessagePassing layer across different scales and aggregation methods:  
-1. **Scale Testing**:  
-   - Small graphs (100 nodes)  
-   - Medium graphs (1,000-10,000 nodes)  
-   - Large graphs (20,000+ nodes)  
-2. **Aggregation Methods**:  
-   - `sum`: Simple summation of neighbor features  
-   - `mean`: Average of neighbor features  
-   - `max`: Maximum value across neighbor features  
-   - `min`: Minimum value across neighbor features  
-3. **Key Observations**:  
-   - **max/min Efficiency Advantage**:
-     - At 20k nodes, max/min are 23-30% faster than sum
-     - Gains increase with graph size
-     - Hardware-level optimizations favor reduction operations
+1. Legacy (pre-refactor style) vs current `MessagePassing` forward timing.
+2. End-to-end Cora pipeline timing (`load_cora_dir` + GCN train + evaluate).
 
-   - **Unexpected Scaling**:
-     - max/min show better than O(n) scaling
-     - Possible reasons:
-       - CPU branch prediction (early termination)
-       - Vectorized instructions (AVX)
-       - Memory access patterns
+### Test Environment
 
-   - **Mean Paradox Resolved**:
-     - Mean is faster than sum at scale
+- **Platform**: Windows-11-10.0.26200-SP0
+- **Python**: 3.13.5
+- **PyTorch**: 2.8.0+cpu
+- **CUDA**: False
 
-4. **Recommendations**:
-   - For accuracy-critical tasks: Use `sum` (most stable)
-   - For large graphs: Prefer `max` (fastest at scale)
-   - For balanced workloads: `mean` offers best compromise 
+### Methodology
 
-## Running the Benchmarks  
-To reproduce these benchmarks:  
-```bash  
-python tests/profile_performance.py  
-```  
-The script will output detailed statistics and markdown-formatted table rows that can be directly added to this document.  
+- Synthetic benchmark settings:
+  - feature dimension: 16
+  - warmups: 3
+  - timed runs: 8
+  - CPU threads: 1
+  - configs: `(100, 200)`, `(1_000, 5_000)`, `(10_000, 50_000)` as `(nodes, edges)`
+  - aggregation modes: `sum`, `mean`, `max`, `min`
+- Comparison metric:
+  - `Current/Legacy` ratio where:
+    - `1.00x` means equal median runtime
+    - `>1.00x` means current is slower
+    - `<1.00x` means current is faster
+  - Spread reported as `p10/p90` from Python’s `statistics.quantiles(..., n=10)` (with 8 timed runs per config, these are approximate spread bands, not large-sample percentiles).
+- Cora end-to-end run:
+  - dataset: `tests/fixtures/cora_mini`
+  - model: 2-layer `GCNConv` (`hidden=16`)
+  - epochs: 30
+  - optimizer: Adam (`lr=1e-2`)
+  - seed: 42
+  - timing: three full repetitions (each repetition loads data, trains, evaluates); reported medians and `p10/p90` are over those three runs.
+
+### MessagePassing: Legacy vs Current
+
+| Nodes | Edges | Aggr | Legacy median [p10,p90] (s) | Current median [p10,p90] (s) | Current/Legacy |
+|:-----:|:-----:|:----:|:---------------------------:|:----------------------------:|:--------------:|
+| 100 | 200 | sum | 0.0080 [0.0052,0.0098] | 0.0077 [0.0066,0.0104] | 0.96x |
+| 100 | 200 | mean | 0.0106 [0.0082,0.0147] | 0.0113 [0.0085,0.0117] | 1.07x |
+| 100 | 200 | max | 0.0070 [0.0064,0.0108] | 0.0073 [0.0067,0.0111] | 1.05x |
+| 100 | 200 | min | 0.0072 [0.0057,0.0099] | 0.0075 [0.0065,0.0100] | 1.04x |
+| 1,000 | 5,000 | sum | 0.0974 [0.0923,0.1091] | 0.1098 [0.1004,0.1149] | 1.13x |
+| 1,000 | 5,000 | mean | 0.1465 [0.1282,0.2347] | 0.1509 [0.1388,0.2252] | 1.03x |
+| 1,000 | 5,000 | max | 0.1162 [0.1046,0.1313] | 0.1285 [0.1199,0.1494] | 1.11x |
+| 1,000 | 5,000 | min | 0.1290 [0.0984,0.1717] | 0.1357 [0.1212,0.1717] | 1.05x |
+| 10,000 | 50,000 | sum | 3.9773 [3.8131,4.2633] | 3.9842 [3.9276,4.1958] | 1.00x |
+| 10,000 | 50,000 | mean | 4.3864 [4.2396,4.7787] | 4.5620 [4.2177,4.7841] | 1.04x |
+| 10,000 | 50,000 | max | 4.0487 [3.9031,4.3064] | 4.1610 [3.9438,4.1983] | 1.03x |
+| 10,000 | 50,000 | min | 4.0944 [3.8962,4.6841] | 4.1556 [3.9926,4.2658] | 1.01x |
+
+Conclusion: refactor is roughly performance-neutral at larger scale, with mild regressions in some smaller/mid cases. No major regression.
+
+### Cora End-to-End (GCN)
+
+| Data dir | Nodes | Edges | Epochs | Load median [p10,p90] (s) | Train median [p10,p90] (s) | Eval median [p10,p90] (s) | Train nodes/sec | Test acc |
+|:---------|------:|------:|------:|---------------------------:|----------------------------:|---------------------------:|----------------:|---------:|
+| `tests/fixtures/cora_mini` | 3 | 4 | 30 | 0.0015 [0.0014,0.0022] | 0.1026 [0.0888,0.1249] | 0.0021 [0.0006,0.0043] | 877.46 | 1.000 |
+
+### Notes and Limitations
+
+- The end-to-end benchmark currently uses the mini fixture for deterministic CI-style reproducibility.
+- For release-level external reporting, rerun with full Cora files and record those numbers separately.
+- This baseline is CPU-only and should not be generalized to GPU behavior.
+
+## Legacy Synthetic Benchmark (Reference)
+
+The earlier synthetic benchmark and analysis are preserved in `tests/profile_performance.py`.
+
+## Running the Benchmarks
+
+### Phase 2 release baseline
+
+Defaults match the methodology above (`warmup-runs=3`, `timed-runs=8`, `num-threads=1`).
+
+```bash
+python tests/profile_phase2_release.py
+```
+
+Optional full-Cora run:
+
+```bash
+python tests/profile_phase2_release.py --data-dir path/to/cora_dir
+```
+
+### Legacy synthetic benchmark
+
+```bash
+python tests/profile_performance.py
+```
