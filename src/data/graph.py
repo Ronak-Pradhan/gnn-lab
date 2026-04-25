@@ -108,15 +108,3 @@ class Graph:
             True if the graph is directed, False if undirected
         """
         return self.directed
-
-# Undirected graph: 0 ↔ 1 ↔ 2
-edge_index = torch.tensor([[0, 1, 1, 2],
-                          [1, 0, 2, 1]])
-graph = Graph(
-    node_features=torch.randn(3, 16),  # 3 nodes, 16 features
-    edge_index=edge_index
-)
-
-assert graph.get_neighbors(1).tolist() == [0, 2]
-assert graph.is_directed() == False
-assert graph.num_nodes == 3

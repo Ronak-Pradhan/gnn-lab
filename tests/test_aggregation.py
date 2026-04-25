@@ -86,7 +86,8 @@ def test_isolated_node() -> None:
     agg = aggregate_neighbors(graph, 1, "sum")
     assert torch.allclose(agg, torch.zeros(2))  # No neighbors → zeros
 
-def test_invalid_aggregation_mode():
+def test_invalid_aggregation_mode() -> None:
+    """Unknown ``aggr`` string must raise ``ValueError``."""
     features = torch.randn(3, 3)
     edge_index = torch.tensor([[0, 1, 1, 2], [1, 0, 2, 1]])
     graph = Graph(features, edge_index, directed=False)
@@ -102,13 +103,15 @@ def test_node_index_out_of_bounds():
     with pytest.raises(IndexError):
         aggregate_neighbors(graph, 100, "sum")  # Only 3 nodes exist
 
-def test_zero_feature_dimension():
+def test_zero_feature_dimension() -> None:
+    """With zero feature columns, aggregation should return an empty feature vector."""
     features = torch.empty(3, 0)  # 3 nodes, 0 features
     graph = Graph(features, torch.empty((2, 0)))
     agg = aggregate_neighbors(graph, 0, "sum")
     assert agg.shape == (0,)  # Empty but correct shape
 
-def test_large_graph_performance():
+def test_large_graph_performance() -> None:
+    """Smoke test a moderately large graph for completion without OOM on one aggregation."""
     # 10k nodes, 100k edges (test for OOM errors)
     features = torch.randn(10000, 128)
     edge_index = torch.randint(0, 10000, (2, 100000))
