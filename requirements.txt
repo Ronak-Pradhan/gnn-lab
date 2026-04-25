@@ -1,0 +1,5 @@
+# Pinned for reproducible installs and CI (Python 3.13).
+# For a specific CUDA build, follow https://pytorch.org/get-started/locally/ instead of the default CPU wheel.
+torch==2.8.0
+pytest==9.0.3
+numpy==2.2.6
